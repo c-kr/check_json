@@ -57,13 +57,17 @@ $ua->protocols_allowed( [ 'http', 'https'] );
 $ua->parse_head(0);
 $ua->timeout($np->opts->timeout);
 
-my $response = $ua->get($np->opts->URL);
+my $response = ($ua->get($np->opts->URL));
 
-if ($response->header("content-type") ne 'application/json') {
-     $np->nagios_exit(UNKNOWN,"Content type is not JSON: ".$response->header("content-type"));
+if ($response->is_success) {
+    if ($response->header("content-type") ne 'application/json') {
+        $np->nagios_exit(UNKNOWN,"Content type is not JSON: ".$response->header("content-type"));
+    }
+} else {
+    $np->nagios_exit(CRITICAL, "Connection failed: ".$response->status_line);
 }
 
-my $json_response = decode_json($response->content) ; #NAG-EXIT;
+my $json_response = decode_json($response->content);
 if ($np->opts->verbose) { (print Dumper ($json_response))};
 
 my $value;
