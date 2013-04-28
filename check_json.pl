@@ -15,8 +15,7 @@ my $np = Nagios::Plugin->new(
     blurb   => 'Nagios plugin to check JSON attributes via http(s)',
     extra   => "\nExample: \n"
     . "check_json.pl -U http://192.168.5.10:9332/local_stats -a '{shares}->{dead}' -w :5 -c :10",
-    url     => 'url',
-    license => 'GPLv2',
+    url     => 'https://github.com/c-kr/check_json',
     plugin  => 'check_json',
     timeout => 15,
 );
@@ -31,6 +30,10 @@ $np->add_arg(
     spec => 'attribute|a=s',
     help => '-a, --attribute {shares}->{dead}',
     required => 1,
+);
+$np->add_arg(
+    spec => 'divisor|D=i',
+    help => '-D, --divisor 1000000',
 );
 $np->add_arg(
     spec => 'warning|w=s',
@@ -52,7 +55,7 @@ $np->getopts;
 ## GET URL
 my $ua = LWP::UserAgent->new;
 
-$ua->agent('Redirect Bot');
+$ua->agent('check_json/0.1');
 $ua->protocols_allowed( [ 'http', 'https'] );
 $ua->parse_head(0);
 $ua->timeout($np->opts->timeout);
@@ -60,7 +63,7 @@ $ua->timeout($np->opts->timeout);
 my $response = ($ua->get($np->opts->URL));
 
 if ($response->is_success) {
-    if ($response->header("content-type") ne 'application/json') {
+    if (!($response->header("content-type") =~ 'application/json')) {
         $np->nagios_exit(UNKNOWN,"Content type is not JSON: ".$response->header("content-type"));
     }
 } else {
@@ -77,6 +80,10 @@ eval $exec;
 
 if (!defined $value) {
     $np->nagios_exit(UNKNOWN, "No value received");
+}
+
+if (defined $np->opts->divisor) {
+    $value = $value/$np->opts->divisor;
 }
 
 $np->add_perfdata( 
