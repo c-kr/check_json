@@ -86,14 +86,16 @@ if (defined $np->opts->divisor) {
     $value = $value/$np->opts->divisor;
 }
 
+my $result = $np->check_threshold($value);
+
 $np->add_perfdata( 
     label => 'value',
     value => $value,
-    #threshold => $threshold,
+    threshold => $np->threshold(),
 );
 
 $np->nagios_exit(
-    return_code => $np->check_threshold($value),
-    message     => $value
+    return_code => $result,
+    message     => $value,
 );
 
