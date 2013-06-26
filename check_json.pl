@@ -7,7 +7,7 @@ use JSON 'decode_json';
 use Nagios::Plugin;
 use Data::Dumper;
 
-my $np = Nagios::Plugin->new(  
+my $np = Nagios::Plugin->new(
     usage => "Usage: %s [ -v|--verbose ] [-U <URL>] [-t <timeout>] "
     . "[ -c|--critical <threshold> ] [ -w|--warning <threshold> ] "
     . "[ -a | --attribute ] <attribute>",
@@ -56,6 +56,7 @@ $np->getopts;
 my $ua = LWP::UserAgent->new;
 
 $ua->agent('check_json/0.1');
+$ua->default_header('Accept' => 'application/json');
 $ua->protocols_allowed( [ 'http', 'https'] );
 $ua->parse_head(0);
 $ua->timeout($np->opts->timeout);
@@ -88,7 +89,7 @@ if (defined $np->opts->divisor) {
 
 my $result = $np->check_threshold($value);
 
-$np->add_perfdata( 
+$np->add_perfdata(
     label => 'value',
     value => $value,
     threshold => $np->threshold(),
