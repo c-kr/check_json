@@ -8,15 +8,17 @@ use Nagios::Plugin;
 use Data::Dumper;
 
 my $np = Nagios::Plugin->new(
-    usage => "Usage: %s -U <URL> -a|--attribute <attribute> [-t|--timeout <timeout>] "
+    usage => "Usage: %s -u|--url <URL> -a|--attribute <attribute> "
     . "[ -c|--critical <threshold> ] [ -w|--warning <threshold> ] "
-    . "[ -a|--attribute <attribute> ] "
-    . "[ -D|--divisor <divisor> ] "
-    . "[ -p|--perfvars <fields> ]",
+    . "[ -p|--perfvars <fields> ] "
+    . "[ -t|--timeout <timeout> ] "
+    . "[ -d|--divisor <divisor> ] "
+    . "[ -h|--help ] ",
     version => '0.2',
     blurb   => 'Nagios plugin to check JSON attributes via http(s)',
     extra   => "\nExample: \n"
-    . "check_json.pl -U http://192.168.5.10:9332/local_stats -a '{shares}->{dead}' -w :5 -c :10",
+    . "check_json.pl --url http://192.168.5.10:9332/local_stats --attribute '{shares}->{dead}' "
+    . "--warning :5 --critical :10 --perfvars '{shares}->{dead},{shares}->{live}'",
     url     => 'https://github.com/c-kr/check_json',
     plugin  => 'check_json',
     timeout => 15,
@@ -25,8 +27,8 @@ my $np = Nagios::Plugin->new(
 
  # add valid command line options and build them into your usage/help documentation.
 $np->add_arg(
-    spec => 'URL|U=s',
-    help => '-U, --URL http://192.168.5.10:9332/local_stats',
+    spec => 'url|u=s',
+    help => '-u, --url (eg. http://192.168.5.10:9332/local_stats}',
     required => 1,
 );
 $np->add_arg(
@@ -35,8 +37,8 @@ $np->add_arg(
     required => 1,
 );
 $np->add_arg(
-    spec => 'divisor|D=i',
-    help => '-D, --divisor 1000000',
+    spec => 'divisor|d=i',
+    help => '-d, --divisor 1000000',
 );
 $np->add_arg(
     spec => 'warning|w=s',
@@ -52,7 +54,8 @@ $np->add_arg(
 );
 $np->add_arg(
     spec => 'perfvars|p=s',
-    help => '-p, --perfvars INTEGER:INTEGER . CSV list of fields from JSON response to include in perfdata ',
+    help => '-p, --perfvars . CSV list of fields from JSON response to include in perfdata '
+    . '{shares}->{dead},{shares}->{live}',
 );
 
 ## Parse @ARGV and process standard arguments (e.g. usage, help, version)
@@ -69,7 +72,7 @@ $ua->parse_head(0);
 $ua->timeout($np->opts->timeout);
 if ($np->opts->verbose) { (print Dumper ($ua))};
 
-my $response = ($ua->get($np->opts->URL));
+my $response = ($ua->get($np->opts->url));
 
 if ($response->is_success) {
     if (!($response->header("content-type") =~ 'application/json')) {
@@ -86,10 +89,8 @@ if ($np->opts->verbose) { (print Dumper ($json_response))};
 my $check_value;
 my $check_value_str = '$check_value = $json_response->'.$np->opts->attribute;
 
-# if ($np->opts->verbose) { (print Dumper ($exec))};
+if ($np->opts->verbose) { (print Dumper ($check_value_str))};
 eval $check_value_str;
-
-#$attribute_value = $json_response->{eval $np->opts->attribute};
 
 if (!defined $check_value) {
     $np->nagios_exit(UNKNOWN, "No value received");
@@ -101,38 +102,39 @@ if (defined $np->opts->divisor) {
 
 my $result = $np->check_threshold($check_value);
 
-my @perfdata;
+my @statusmsg;
 
 # routine to add perfdata from JSON response based on a loop of keys given in perfvals (csv)
 if ($np->opts->perfvars) {
     foreach my $key (split(',', $np->opts->perfvars)) {
         # use last element of key as label
         my $label = (split('->', $key))[-1];
+        # make label ascii compatible
         $label =~ s/[^a-zA-Z0-9_-]//g  ;
         my $perf_val;
         $perf_val = eval '$json_response->'.$key;
-        print Dumper ("JSON key: ".$label.", JSON val: " . eval $perf_val);
-        if ($np->opts->verbose) { print Dumper ("JSON key: ".$label.", JSON val: " . eval $perf_val) };
+        if ($np->opts->verbose) { print Dumper ("JSON key: ".$label.", JSON val: " . $perf_val) };
         if ( defined($perf_val) ) {
-            push(@perfdata, {label => lc $label, value => $perf_val});
-            $np->add_perfdata(
-                label => lc $label,
-                value => $perf_val,
-                #threshold => $np->threshold(),
-            );
+            push(@statusmsg, "$label: $perf_val");
+            # add threshold if attribute option matches key
+            if ($key eq $np->opts->attribute) {
+                $np->add_perfdata(
+                    label => lc $label,
+                    value => $perf_val,
+                    threshold => $np->threshold(),
+                );
+            } else {
+                $np->add_perfdata(
+                    label => lc $label,
+                    value => $perf_val,
+                );            
+            }
         }
     }
 }
 
-sub pp {
-  my $h = shift();
-  qq[{${\(join',',map"$_=>$h->{$_}",keys%$h)}}]
-}
-
-print Dumper (@perfdata);
-
 $np->nagios_exit(
     return_code => $result,
-    message     => pp @perfdata,
+    message     => join(', ', @statusmsg),
 );
 
