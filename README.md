@@ -9,7 +9,7 @@ Performance data is also enhanced to extract performance data compliant to Nagio
 
 Usage: 
 ```
-check_json -u|--url <URL> -a|--attribute <attribute> [ -c|--critical <threshold> ] [ -w|--warning <threshold> ] [ -p|--perfvars <fields> ] [ -t|--timeout <timeout> ] [ -d|--divisor <divisor> ] [ -h|--help ]
+check_json -u|--url <URL> -a|--attribute <attribute> [ -c|--critical <threshold> ] [ -w|--warning <threshold> ] [ -p|--perfvars <fields> ] [ -t|--timeout <timeout> ] [ -d|--divisor <divisor> ] [ -T|--contenttype <content-type> ] [ -h|--help ]
 ```
 
 Example: 
@@ -22,3 +22,9 @@ Result:
 Check JSON status API OK - dead_shares: 2, live_shares: 12, clients_connected: 234 | dead_shares=2;5;10 live_shares=12 clients_connected=234
 ```
 
+Requirements
+============
+
+Perl JSON package
+
+* Debian : libjson-perl

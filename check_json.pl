@@ -13,6 +13,7 @@ my $np = Nagios::Plugin->new(
     . "[ -p|--perfvars <fields> ] "
     . "[ -t|--timeout <timeout> ] "
     . "[ -d|--divisor <divisor> ] "
+    . "[ -T|--contenttype <content-type> ] "
     . "[ -h|--help ] ",
     version => '0.2',
     blurb   => 'Nagios plugin to check JSON attributes via http(s)',
@@ -52,11 +53,19 @@ $np->add_arg(
     . 'http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT '
     . 'for the threshold format. ',
 );
+
 $np->add_arg(
     spec => 'perfvars|p=s',
     help => '-p, --perfvars . CSV list of fields from JSON response to include in perfdata '
     . '{shares}->{dead},{shares}->{live}',
 );
+
+$np->add_arg(
+    spec => 'contenttype|T=s',
+    default => 'application/json',
+    help => '-T, --contenttype . content-type accepted if different from application/json ',
+);
+
 
 ## Parse @ARGV and process standard arguments (e.g. usage, help, version)
 $np->getopts;
@@ -75,7 +84,7 @@ if ($np->opts->verbose) { (print Dumper ($ua))};
 my $response = ($ua->get($np->opts->url));
 
 if ($response->is_success) {
-    if (!($response->header("content-type") =~ 'application/json')) {
+    if (!($response->header("content-type") =~ $np->opts->contenttype)) {
         $np->nagios_exit(UNKNOWN,"Content type is not JSON: ".$response->header("content-type"));
     }
 } else {
