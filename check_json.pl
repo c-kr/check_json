@@ -14,12 +14,14 @@ my $np = Nagios::Plugin->new(
     . "[ -t|--timeout <timeout> ] "
     . "[ -d|--divisor <divisor> ] "
     . "[ -T|--contenttype <content-type> ] "
+    . "[ -o|--ouputvars <fields> ] "
     . "[ -h|--help ] ",
-    version => '0.2',
+    version => '0.3',
     blurb   => 'Nagios plugin to check JSON attributes via http(s)',
     extra   => "\nExample: \n"
     . "check_json.pl --url http://192.168.5.10:9332/local_stats --attribute '{shares}->{dead}' "
-    . "--warning :5 --critical :10 --perfvars '{shares}->{dead},{shares}->{live}'",
+    . "--warning :5 --critical :10 --perfvars '{shares}->{dead},{shares}->{live}'"
+    . "--outputvars '{status_message}'",
     url     => 'https://github.com/c-kr/check_json',
     plugin  => 'check_json',
     timeout => 15,
@@ -58,6 +60,12 @@ $np->add_arg(
     spec => 'perfvars|p=s',
     help => '-p, --perfvars . CSV list of fields from JSON response to include in perfdata '
     . '{shares}->{dead},{shares}->{live}',
+);
+
+$np->add_arg(
+    spec => 'outputvars|o=s',
+    help => '-o, --outputvars . CSV list of fields output in status message, same syntax as '
+    . 'perfvars',
 );
 
 $np->add_arg(
@@ -140,6 +148,19 @@ if ($np->opts->perfvars) {
                 );            
             }
         }
+    }
+}
+
+# output some vars in message
+if ($np->opts->outputvars) {
+    foreach my $key (split(',', $np->opts->outputvars)) {
+        # use last element of key as label
+        my $label = (split('->', $key))[-1];
+        # make label ascii compatible
+        $label =~ s/[^a-zA-Z0-9_-]//g;
+        my $perf_value;
+        $perf_value = eval '$json_response->'.$key;
+	push(@statusmsg, "$label: $perf_value");
     }
 }
 
