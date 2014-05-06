@@ -14,8 +14,9 @@ my $np = Nagios::Plugin->new(
     . "[ -t|--timeout <timeout> ] "
     . "[ -d|--divisor <divisor> ] "
     . "[ -T|--contenttype <content-type> ] "
+    . "[ --ignoressl ] "
     . "[ -h|--help ] ",
-    version => '0.2',
+    version => '0.3',
     blurb   => 'Nagios plugin to check JSON attributes via http(s)',
     extra   => "\nExample: \n"
     . "check_json.pl --url http://192.168.5.10:9332/local_stats --attribute '{shares}->{dead}' "
@@ -29,7 +30,7 @@ my $np = Nagios::Plugin->new(
  # add valid command line options and build them into your usage/help documentation.
 $np->add_arg(
     spec => 'url|u=s',
-    help => '-u, --url (eg. http://192.168.5.10:9332/local_stats}',
+    help => '-u, --url http://192.168.5.10:9332/local_stats',
     required => 1,
 );
 $np->add_arg(
@@ -56,14 +57,19 @@ $np->add_arg(
 
 $np->add_arg(
     spec => 'perfvars|p=s',
-    help => '-p, --perfvars . CSV list of fields from JSON response to include in perfdata '
-    . '{shares}->{dead},{shares}->{live}',
+    help => "-p, --perfvars eg. '{shares}->{dead},{shares}->{live}'\n   "
+    . "CSV list of fields from JSON response to include in perfdata "
 );
 
 $np->add_arg(
     spec => 'contenttype|T=s',
     default => 'application/json',
-    help => '-T, --contenttype . content-type accepted if different from application/json ',
+    help => "-T, --contenttype application/json \n   "
+    . "Content-type accepted if different from application/json ",
+);
+$np->add_arg(
+    spec => 'ignoressl',
+    help => "--ignoressl\n   Ignore bad ssl certificates",
 );
 
 
@@ -74,11 +80,16 @@ if ($np->opts->verbose) { (print Dumper ($np))};
 ## GET URL
 my $ua = LWP::UserAgent->new;
 
-$ua->agent('check_json/0.2');
+$ua->agent('check_json/0.3');
 $ua->default_header('Accept' => 'application/json');
 $ua->protocols_allowed( [ 'http', 'https'] );
 $ua->parse_head(0);
 $ua->timeout($np->opts->timeout);
+
+if ($np->opts->ignoressl) {
+    $ua->ssl_opts(verify_hostname => 0, SSL_verify_mode => 0x00);
+}
+
 if ($np->opts->verbose) { (print Dumper ($ua))};
 
 my $response = ($ua->get($np->opts->url));
