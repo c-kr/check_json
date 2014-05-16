@@ -10,6 +10,7 @@ use Data::Dumper;
 my $np = Nagios::Plugin->new(
     usage => "Usage: %s -u|--url <URL> -a|--attribute <attribute> "
     . "[ -c|--critical <threshold> ] [ -w|--warning <threshold> ] "
+    . "[ -e|--expect <value> ] "
     . "[ -p|--perfvars <fields> ] "
     . "[ -o|--outputvars <fields> ] "
     . "[ -t|--timeout <timeout> ] "
@@ -59,6 +60,11 @@ $np->add_arg(
     help => '-c, --critical INTEGER:INTEGER . See '
     . 'http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT '
     . 'for the threshold format. ',
+);
+
+$np->add_arg(
+    spec => 'expect|e=s',
+    help => '-e, --expect expected value to see for attribute.',
 );
 
 $np->add_arg(
@@ -130,6 +136,10 @@ if (!defined $check_value) {
 
 if (defined $np->opts->divisor) {
     $check_value = $check_value/$np->opts->divisor;
+}
+
+if (defined $np->opts->expect && $np->opts->expect ne $check_value) {
+    $np->nagios_exit(CRITICAL, "Expected value (" . $np->opts->expect . ") not found. Actual: " . $check_value);
 }
 
 my $result = $np->check_threshold($check_value);
