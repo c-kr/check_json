@@ -158,7 +158,7 @@ my @statusmsg;
 
 # routine to add perfdata from JSON response based on a loop of keys given in perfvals (csv)
 if ($np->opts->perfvars) {
-    foreach my $key ($np->opts->perfvars eq '*' ? map { "{$_}"} sort keys $json_response : split(',', $np->opts->perfvars)) {
+    foreach my $key ($np->opts->perfvars eq '*' ? map { "{$_}"} sort keys %$json_response : split(',', $np->opts->perfvars)) {
         # use last element of key as label
         my $label = (split('->', $key))[-1];
         # make label ascii compatible
@@ -188,7 +188,7 @@ if ($np->opts->perfvars) {
 
 # output some vars in message
 if ($np->opts->outputvars) {
-    foreach my $key ($np->opts->outputvars eq '*' ? map { "{$_}"} sort keys $json_response : split(',', $np->opts->outputvars)) {
+    foreach my $key ($np->opts->outputvars eq '*' ? map { "{$_}"} sort keys %$json_response : split(',', $np->opts->outputvars)) {
         # use last element of key as label
         my $label = (split('->', $key))[-1];
         # make label ascii compatible
