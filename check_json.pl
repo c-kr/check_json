@@ -2,6 +2,7 @@
 
 use warnings;
 use strict;
+use HTTP::Request::Common;
 use LWP::UserAgent;
 use JSON;
 use Nagios::Plugin;
@@ -14,6 +15,7 @@ my $np = Nagios::Plugin->new(
     . "[ -o|--outputvars <fields> ] "
     . "[ -t|--timeout <timeout> ] "
     . "[ -d|--divisor <divisor> ] "
+    . "[ -m|--metadata <content> ] "
     . "[ -T|--contenttype <content-type> ] "
     . "[ --ignoressl ] "
     . "[ -h|--help ] ",
@@ -74,6 +76,12 @@ $np->add_arg(
 );
 
 $np->add_arg(
+    spec => 'metadata|m=s',
+    help => "-m|--metadata \'{\"name\":\"value\"}\'\n   "
+    . "RESTful request metadata in JSON format"
+);
+
+$np->add_arg(
     spec => 'contenttype|T=s',
     default => 'application/json',
     help => "-T, --contenttype application/json \n   "
@@ -104,7 +112,12 @@ if ($np->opts->ignoressl) {
 
 if ($np->opts->verbose) { (print Dumper ($ua))};
 
-my $response = ($ua->get($np->opts->url));
+my $response;
+if ($np->opts->metadata) {
+    $response = $ua->request(GET $np->opts->url, 'Content-type' => 'application/json', 'Content' => $np->opts->metadata );
+} else {
+    $response = $ua->request(GET $np->opts->url);
+}
 
 if ($response->is_success) {
     if (!($response->header("content-type") =~ $np->opts->contenttype)) {
