@@ -140,6 +140,7 @@ my %attributes = map { $attributes[$_] => { warning => $warning[$_] , critical =
 my %check_value;
 my $check_value;
 my $result = -1;
+my $resultTmp;
 
 foreach my $attribute (sort keys %attributes){
     my $check_value;
@@ -156,11 +157,40 @@ foreach my $attribute (sort keys %attributes){
         $check_value = $check_value/$attributes{$attribute}{'divisor'};
     }
 
-    my $resultTmp = $np->check_threshold(
-        check => $check_value,
-        warning => $attributes{$attribute}{'warning'},
-        critical => $attributes{$attribute}{'critical'}
-    );
+    if ( $check_value eq "true" or $check_value eq "false" ) {
+       if ( $check_value eq "true") {
+          $resultTmp = 0;
+          if ($attributes{$attribute}{'critical'} eq 1 or $attributes{$attribute}{'critical'} eq "true") {
+             $resultTmp = 2;
+          }
+          else
+          {
+             if ($attributes{$attribute}{'warning'} eq 1 or $attributes{$attribute}{'warning'} eq "true") {
+                $resultTmp = 1;
+             }
+          }
+       }
+       if ( $check_value eq "false") {
+          $resultTmp = 0;
+          if ($attributes{$attribute}{'critical'} eq 0 or $attributes{$attribute}{'critical'} eq "false") {
+             $resultTmp = 2;
+           }
+           else
+           {
+              if ($attributes{$attribute}{'warning'} eq 0 or $attributes{$attribute}{'warning'} eq "false") {
+                 $resultTmp = 1;
+              }
+           }
+       }
+    }
+    else
+    {
+       $resultTmp = $np->check_threshold(
+           check => $check_value,
+           warning => $attributes{$attribute}{'warning'},
+           critical => $attributes{$attribute}{'critical'}
+       );
+     }
     $result = $resultTmp if $result < $resultTmp;
 
     $attributes{$attribute}{'check_value'}=$check_value;
