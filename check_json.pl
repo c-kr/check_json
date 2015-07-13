@@ -100,6 +100,7 @@ if ($np->opts->verbose) { (print Dumper ($np))};
 ## GET URL
 my $ua = LWP::UserAgent->new;
 
+$ua->env_proxy;
 $ua->agent('check_json/0.5');
 $ua->default_header('Accept' => 'application/json');
 $ua->protocols_allowed( [ 'http', 'https'] );
