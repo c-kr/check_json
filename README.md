@@ -27,4 +27,4 @@ Requirements
 
 Perl JSON package
 
-* Debian : libjson-perl
+* Debian / Ubuntu : libjson-perl libnagios-plugin-perl libwww-perl
