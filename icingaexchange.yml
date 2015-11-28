@@ -1,0 +1,8 @@
+name: check_json
+description: "file:///README.md"
+url: "https://github.com/c-kr/check_json"
+tags: json
+vendor: Linux
+target: Website
+type: Plugin
+license: gplv2
