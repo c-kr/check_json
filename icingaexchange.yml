@@ -6,3 +6,13 @@ vendor: Linux
 target: Website
 type: Plugin
 license: gplv2
+releases: 
+  - 
+    name: 0.5
+    description: "0.5 Release"
+    files: 
+      - 
+        name: check_json.pl
+        url: "file:///check_json.pl"
+        description: "0.5 Release"
+        checksum: debdd892ddebd4bf76070dd5ed92468f
