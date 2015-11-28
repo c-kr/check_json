@@ -9,7 +9,7 @@ use Nagios::Plugin;
 use Data::Dumper;
 
 my $np = Nagios::Plugin->new(
-    usage => "Usage: %s -u|--url <URL> -a|--attributes <attributes> "
+    usage => "Usage: %s -u|--url <http://user:pass@host:port/url> -a|--attributes <attributes> "
     . "[ -c|--critical <thresholds> ] [ -w|--warning <thresholds> ] "
     . "[ -p|--perfvars <fields> ] "
     . "[ -o|--outputvars <fields> ] "
@@ -34,7 +34,7 @@ my $np = Nagios::Plugin->new(
  # add valid command line options and build them into your usage/help documentation.
 $np->add_arg(
     spec => 'url|u=s',
-    help => '-u, --url http://192.168.5.10:9332/local_stats',
+    help => '-u, --url http://user:pass@192.168.5.10:9332/local_stats',
     required => 1,
 );
 
