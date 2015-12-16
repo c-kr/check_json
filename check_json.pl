@@ -9,7 +9,7 @@ use Nagios::Plugin;
 use Data::Dumper;
 
 my $np = Nagios::Plugin->new(
-    usage => "Usage: %s -u|--url <http://user:pass@host:port/url> -a|--attributes <attributes> "
+    usage => "Usage: %s -u|--url <http://user:pass\@host:port/url> -a|--attributes <attributes> "
     . "[ -c|--critical <thresholds> ] [ -w|--warning <thresholds> ] "
     . "[ -p|--perfvars <fields> ] "
     . "[ -o|--outputvars <fields> ] "
