@@ -145,8 +145,8 @@ my $resultTmp;
 
 foreach my $attribute (sort keys %attributes){
     my $check_value;
-    my $check_value_str = '$check_value = $json_response->'.$attribute;
-    
+    my $check_value_str = '$check_value = $json_response->{\'' . $attribute . '\'}';
+
     if ($np->opts->verbose) { (print Dumper ($check_value_str))};
     eval $check_value_str;
 
