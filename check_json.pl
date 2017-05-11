@@ -245,10 +245,10 @@ if ($np->opts->outputvars) {
     foreach my $key ($np->opts->outputvars eq '*' ? map { "{$_}"} sort keys %$json_response : split(',', $np->opts->outputvars)) {
         # use last element of key as label
         my $label = (split('->', $key))[-1];
-        # make label ascii compatible
+        # make label ascii compatible i.e. remove the { and }
         $label =~ s/[^a-zA-Z0-9_-]//g;
         my $output_value;
-        $output_value = $json_response->{$key};
+        $output_value = $json_response->{$label};
         push(@statusmsg, "$label: $output_value");
     }
 }
