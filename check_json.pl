@@ -4,6 +4,7 @@ use warnings;
 use strict;
 use HTTP::Request::Common;
 use LWP::UserAgent;
+use URI::URL;
 use JSON;
 use Nagios::Plugin;
 use Data::Dumper;
@@ -18,9 +19,10 @@ my $np = Nagios::Plugin->new(
     . "[ -d|--divisor <divisor> ] "
     . "[ -m|--metadata <content> ] "
     . "[ -T|--contenttype <content-type> ] "
+    . "[ -A|--auth <username:password> ] "
     . "[ --ignoressl ] "
     . "[ -h|--help ] ",
-    version => '0.5',
+    version => '0.6',
     blurb   => 'Nagios plugin to check JSON attributes via http(s)',
     extra   => "\nExample: \n"
     . "check_json.pl --url http://192.168.5.10:9332/local_stats --attributes '{shares}->{dead}' "
@@ -95,6 +97,12 @@ $np->add_arg(
 );
 
 $np->add_arg(
+    spec => 'auth|A=s',
+    help => '-A, --auth realm:username:password',
+    required => 0,
+);
+
+$np->add_arg(
     spec => 'ignoressl',
     help => "--ignoressl\n   Ignore bad ssl certificates",
 );
@@ -107,7 +115,7 @@ if ($np->opts->verbose) { (print Dumper ($np))};
 my $ua = LWP::UserAgent->new;
 
 $ua->env_proxy;
-$ua->agent('check_json/0.5');
+$ua->agent('check_json/0.6');
 $ua->default_header('Accept' => 'application/json');
 $ua->protocols_allowed( [ 'http', 'https'] );
 $ua->parse_head(0);
@@ -115,6 +123,12 @@ $ua->timeout($np->opts->timeout);
 
 if ($np->opts->ignoressl) {
     $ua->ssl_opts(verify_hostname => 0, SSL_verify_mode => 0x00);
+}
+
+if ($np->opts->auth) {
+    my @credentials = split(':', $np->opts->auth);
+    my $url = url $np->opts->url;
+    $ua->credentials($url->host . ':' . $url->port, $credentials[0], $credentials[1], $credentials[2]);
 }
 
 if ($np->opts->verbose) { (print Dumper ($ua))};
