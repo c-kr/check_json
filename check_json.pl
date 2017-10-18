@@ -4,9 +4,12 @@ use warnings;
 use strict;
 use HTTP::Request::Common;
 use LWP::UserAgent;
+use URI::URL;
 use JSON;
 use Nagios::Plugin;
 use Data::Dumper;
+
+my $version = '0.7';
 
 my $np = Nagios::Plugin->new(
     usage => "Usage: %s -u|--url <http://user:pass\@host:port/url> -a|--attributes <attributes> "
@@ -18,9 +21,12 @@ my $np = Nagios::Plugin->new(
     . "[ -d|--divisor <divisor> ] "
     . "[ -m|--metadata <content> ] "
     . "[ -T|--contenttype <content-type> ] "
+    . "[ -A|--auth <username:password> ] "
     . "[ --ignoressl ] "
+    . "[ -A|--hattrib <value> ] "
+    . "[ -C|--hcon <value> ] "
     . "[ -h|--help ] ",
-    version => '0.5',
+    version => $version,
     blurb   => 'Nagios plugin to check JSON attributes via http(s)',
     extra   => "\nExample: \n"
     . "check_json.pl --url http://192.168.5.10:9332/local_stats --attributes '{shares}->{dead}' "
@@ -95,26 +101,57 @@ $np->add_arg(
 );
 
 $np->add_arg(
+    spec => 'auth|A=s',
+    help => '-A, --auth realm:username:password',
+    required => 0,
+);
+
+$np->add_arg(
     spec => 'ignoressl',
     help => "--ignoressl\n   Ignore bad ssl certificates",
+);
+
+$np->add_arg(
+    spec => 'hattrib|A=s',
+    help => "-A, --header-attrib STRING \n "
+    . "Additional Header attribute.",
+);
+$np->add_arg(
+    spec => 'hcon|C=s',
+    help => "-C, --header-content STRING \n "
+    . "Additional Header content.",
 );
 
 ## Parse @ARGV and process standard arguments (e.g. usage, help, version)
 $np->getopts;
 if ($np->opts->verbose) { (print Dumper ($np))};
 
+if ($np->opts->hattrib and not $np->opts->hcon) {
+    $np->nagios_exit(UNKNOWN,"Additional Header attribute provided without Additional Header content");
+}
+if ( not $np->opts->hattrib and $np->opts->hcon) {
+    $np->nagios_exit(UNKNOWN,"Additional Header content provided without Additional Header attribule");
+}
+
 ## GET URL
 my $ua = LWP::UserAgent->new;
 
 $ua->env_proxy;
-$ua->agent('check_json/0.5');
+$ua->agent('check_json/'. $version);
 $ua->default_header('Accept' => 'application/json');
+$ua->default_header($np->opts->hattrib => $np->opts->hcon) if ( $np->opts->hattrib and $np->opts->hcon );
 $ua->protocols_allowed( [ 'http', 'https'] );
 $ua->parse_head(0);
 $ua->timeout($np->opts->timeout);
 
 if ($np->opts->ignoressl) {
     $ua->ssl_opts(verify_hostname => 0, SSL_verify_mode => 0x00);
+}
+
+if ($np->opts->auth) {
+    my @credentials = split(':', $np->opts->auth);
+    my $url = url $np->opts->url;
+    $ua->credentials($url->host . ':' . $url->port, $credentials[0], $credentials[1], $credentials[2]);
 }
 
 if ($np->opts->verbose) { (print Dumper ($ua))};
@@ -139,8 +176,14 @@ my $json_response = decode_json($response->content);
 if ($np->opts->verbose) { (print Dumper ($json_response))};
 
 my @attributes = split(',', $np->opts->attributes);
-my @warning = split(',', $np->opts->warning);
-my @critical = split(',', $np->opts->critical);
+my @warning;
+if ($np->opts->warning) {
+    @warning = split(',', $np->opts->warning);
+}
+my @critical;
+if ($np->opts->critical) {
+    @critical = split(',', $np->opts->critical);
+}
 my @divisor = $np->opts->divisor ? split(',',$np->opts->divisor) : () ;
 my %attributes = map { $attributes[$_] => { warning => $warning[$_] , critical => $critical[$_], divisor => ($divisor[$_] or 0) } } 0..$#attributes;
 
@@ -152,7 +195,7 @@ my $resultTmp;
 foreach my $attribute (sort keys %attributes){
     my $check_value;
     my $check_value_str = '$check_value = $json_response->'.$attribute;
-    
+
     if ($np->opts->verbose) { (print Dumper ($check_value_str))};
     eval $check_value_str;
 
@@ -218,7 +261,7 @@ if ($np->opts->perfvars) {
         # make label ascii compatible
         $label =~ s/[^a-zA-Z0-9_-]//g  ;
         my $perf_value;
-        $perf_value = $json_response->{$key};
+        $perf_value = eval('$json_response->'.$key);
         if ($np->opts->verbose) { print Dumper ("JSON key: ".$label.", JSON val: " . $perf_value) };
         if ( defined($perf_value) ) {
             # add threshold if attribute option matches key
@@ -234,10 +277,40 @@ if ($np->opts->perfvars) {
                 $np->add_perfdata(
                     label => lc $label,
                     value => $perf_value,
-                );            
+                );
             }
         }
     }
+}
+
+sub process_wildcard{
+    my($key,$json_response) = @_;
+
+    if ($np->opts->verbose) { (print "DEBUG: handling wildcard on key ". $key. "\n"); }
+    my @parts;
+    my @result;
+    if ($key !~ /\*/) {
+        $Data::Dumper::Terse = 1;
+        $Data::Dumper::Indent = 0;
+        if ($np->opts->verbose) { (print "DEBUG: Now checking: ". $key. " against: ". Dumper($json_response)."\n")};
+        my $output_value = Dumper(eval('$json_response->'.$key));
+        $Data::Dumper::Terse = 0;
+        $Data::Dumper::Indent = 1;
+        return $output_value;
+    } else {
+        @parts = split(/->[\{\[]?\*[\}\]]?->/,$key,2);
+        my $part1 = $parts[0];
+        my $part2 = $parts[1];
+        if ($np->opts->verbose) { (print "DEBUG: processing first part before wildcard: ". $part1 . "\n"); }
+        my $c = eval('$json_response->'.$part1);
+        return if (! $c);
+        if ($np->opts->verbose) { (print "DEBUG: process_wildcard: Fount childs: ".Dumper($c)."\n")};
+        foreach my $v (values($c)){
+            my $r = process_wildcard($part2,$v);
+            push(@result,$r) if $r;
+        }
+    }
+    return @result;
 }
 
 # output some vars in message
@@ -245,15 +318,16 @@ if ($np->opts->outputvars) {
     foreach my $key ($np->opts->outputvars eq '*' ? map { "{$_}"} sort keys %$json_response : split(',', $np->opts->outputvars)) {
         # use last element of key as label
         my $label = (split('->', $key))[-1];
-        # make label ascii compatible
+        # make label ascii compatible i.e. remove the { and }
         $label =~ s/[^a-zA-Z0-9_-]//g;
         my $output_value;
-        $output_value = $json_response->{$key};
+        ## Handle case of wildcard in the middle of the tree: {data}->*->{description}
+        $output_value = join(", ",process_wildcard($key,$json_response));
         push(@statusmsg, "$label: $output_value");
     }
 }
 
 $np->nagios_exit(
     return_code => $result,
-    message     => join(', ', @statusmsg),
+    message     => join('; ', @statusmsg),
 );
