@@ -14,7 +14,7 @@ check_json -u|--url <URL> -a|--attribute <attribute> [ -c|--critical <threshold>
 
 Example: 
 ```
-./check_json.pl --url http://192.168.5.10:9332/local_stats --attribute '{shares}->{dead_shares}' --warning :5 --critical :10 --perfvars '{shares}->{dead_shares},{shares}->{live_shares},{clients}->{clients_connected}'
+./check_json.pl --url http://192.168.5.10:9332/local_stats --attribute '{shares}->{dead_shares}' --warning :5 --critical :10 --perfvars '{shares}->{dead_shares},{shares}->{live_shares},{clients}->{clients_connected}' -o '{shares}->*->{name},'
 ```
 
 Result:
@@ -22,9 +22,12 @@ Result:
 Check JSON status API OK - dead_shares: 2, live_shares: 12, clients_connected: 234 | dead_shares=2;5;10 live_shares=12 clients_connected=234
 ```
 
+Outputvars: It accepts also wildcards in the middle of the tree.
+
 Requirements
 ============
 
 Perl JSON package
 
 * Debian / Ubuntu : libjson-perl libnagios-plugin-perl libwww-perl
+* RHEL / CentOS : perl-Nagios-Plugin perl-JSON perl-HTTP-Parser
