@@ -26,7 +26,7 @@ my $np = Nagios::Plugin->new(
     extra   => "\nExample: \n"
     . "check_json.pl --url http://192.168.5.10:9332/local_stats --attributes '{shares}->{dead}' "
     . "--warning :5 --critical :10 --perfvars '{shares}->{dead},{shares}->{live}' "
-    . "--outputvars '{status_message}'",
+    . "--outputvars '{status_message}' -x <api_token>",
     url     => 'https://github.com/c-kr/check_json',
     plugin  => 'check_json',
     timeout => 15,
@@ -105,7 +105,6 @@ $np->add_arg(
     help => "-x|--xauth\n   Use X-Auth-Token in header",
 );
 
-
 ## Parse @ARGV and process standard arguments (e.g. usage, help, version)
 $np->getopts;
 if ($np->opts->verbose) { (print Dumper ($np))};
@@ -114,13 +113,13 @@ if ($np->opts->verbose) { (print Dumper ($np))};
 my $ua = LWP::UserAgent->new;
 $ua->env_proxy;
 $ua->agent('check_json/0.5');
-$ua->default_header('Accept' => 'application/json'  );
+$ua->default_header('Accept' => 'application/json');
 $ua->protocols_allowed( [ 'http', 'https'] );
 $ua->parse_head(0);
 $ua->timeout($np->opts->timeout);
 
 if ($np->opts->xauth) {
-    $ua->default_header('Accept' => 'application/json', 'X-Auth-Token' => $np->opts->xauth  );
+    $ua->default_header('Accept' => 'application/json', 'X-Auth-Token' => $np->opts->xauth );
 }
 
 if ($np->opts->ignoressl) {
