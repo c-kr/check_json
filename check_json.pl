@@ -18,6 +18,8 @@ my $np = Nagios::Plugin->new(
     . "[ -d|--divisor <divisor> ] "
     . "[ -m|--metadata <content> ] "
     . "[ -T|--contenttype <content-type> ] "
+    . "[ --client-cert ] "
+    . "[ --private-key ] "
     . "[ --ignoressl ] "
     . "[ -h|--help ] ",
     version => '0.5',
@@ -93,6 +95,18 @@ $np->add_arg(
     help => "-T, --contenttype application/json \n   "
     . "Content-type accepted if different from application/json ",
 );
+$np->add_arg(
+    spec => 'client-cert|J=s',
+    default => '',
+    help => "-T, --httpclientcert /foo/bar.crt \n   "
+    . "Client certificate ",
+);
+$np->add_arg(
+    spec => 'private-key|K=s',
+    default => '',
+    help => "-T, --httpprivatekey /foo/bar.key \n   "
+    . "Client certificate keyfile",
+);
 
 $np->add_arg(
     spec => 'ignoressl',
@@ -115,6 +129,13 @@ $ua->timeout($np->opts->timeout);
 
 if ($np->opts->ignoressl) {
     $ua->ssl_opts(verify_hostname => 0, SSL_verify_mode => 0x00);
+}
+if ($np->opts->httpclientcert) {
+    $ua->ssl_opts(
+                    SSL_cert_file       => $np->opts->httpclientcert,
+                    SSL_key_file        => $np->opts->httpprivatekey,
+    );
+
 }
 
 if ($np->opts->verbose) { (print Dumper ($ua))};
