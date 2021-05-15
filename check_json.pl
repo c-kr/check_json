@@ -18,6 +18,7 @@ my $np = Nagios::Plugin->new(
     . "[ -d|--divisor <divisor> ] "
     . "[ -m|--metadata <content> ] "
     . "[ -T|--contenttype <content-type> ] "
+    . "[ --cacert ] "
     . "[ --client-cert ] "
     . "[ --private-key ] "
     . "[ --ignoressl ] "
@@ -96,6 +97,12 @@ $np->add_arg(
     . "Content-type accepted if different from application/json ",
 );
 $np->add_arg(
+    spec => 'cacert|C=s',
+    default => '',
+    help => "-T, --cacert /foo/ca.crt \n   "
+    . "Ca certificate ",
+);
+$np->add_arg(
     spec => 'client-cert|J=s',
     default => '',
     help => "-T, --httpclientcert /foo/bar.crt \n   "
@@ -129,6 +136,9 @@ $ua->timeout($np->opts->timeout);
 
 if ($np->opts->ignoressl) {
     $ua->ssl_opts(verify_hostname => 0, SSL_verify_mode => 0x00);
+}
+if ($np->opts->{'cacert'}) {
+    $ua->ssl_opts(SSL_ca_file => $np->opts->{'cacert'});
 }
 if ($np->opts->httpclientcert) {
     $ua->ssl_opts(
