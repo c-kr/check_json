@@ -18,6 +18,9 @@ my $np = Nagios::Plugin->new(
     . "[ -d|--divisor <divisor> ] "
     . "[ -m|--metadata <content> ] "
     . "[ -T|--contenttype <content-type> ] "
+    . "[ --cacert ] "
+    . "[ --client-cert ] "
+    . "[ --private-key ] "
     . "[ --ignoressl ] "
     . "[ -h|--help ] ",
     version => '0.5',
@@ -93,6 +96,24 @@ $np->add_arg(
     help => "-T, --contenttype application/json \n   "
     . "Content-type accepted if different from application/json ",
 );
+$np->add_arg(
+    spec => 'cacert|C=s',
+    default => '',
+    help => "-C, --cacert /foo/ca.crt \n   "
+    . "Ca certificate ",
+);
+$np->add_arg(
+    spec => 'client-cert|J=s',
+    default => '',
+    help => "-J, --client-cert /foo/bar.crt \n   "
+    . "Client certificate ",
+);
+$np->add_arg(
+    spec => 'private-key|K=s',
+    default => '',
+    help => "-K, --private-key /foo/bar.key \n   "
+    . "Client certificate keyfile",
+);
 
 $np->add_arg(
     spec => 'ignoressl',
@@ -115,6 +136,15 @@ $ua->timeout($np->opts->timeout);
 
 if ($np->opts->ignoressl) {
     $ua->ssl_opts(verify_hostname => 0, SSL_verify_mode => 0x00);
+}
+if ($np->opts->{'cacert'}) {
+    $ua->ssl_opts(SSL_ca_file => $np->opts->{'cacert'});
+}
+if ($np->opts->{'client-cert'}) {
+    $ua->ssl_opts(
+        SSL_cert_file => $np->opts->{'client-cert'},
+        SSL_key_file  => $np->opts->{'private-key'},
+    );
 }
 
 if ($np->opts->verbose) { (print Dumper ($ua))};
