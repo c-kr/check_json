@@ -140,10 +140,10 @@ if ($np->opts->ignoressl) {
 if ($np->opts->{'cacert'}) {
     $ua->ssl_opts(SSL_ca_file => $np->opts->{'cacert'});
 }
-if ($np->opts->httpclientcert) {
+if ($np->opts->{'client-cert'}) {
     $ua->ssl_opts(
-        SSL_cert_file => $np->opts->httpclientcert,
-        SSL_key_file  => $np->opts->httpprivatekey,
+        SSL_cert_file => $np->opts->{'client-cert'},
+        SSL_key_file  => $np->opts->{'private-key'},
     );
 }
 
