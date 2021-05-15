@@ -99,19 +99,19 @@ $np->add_arg(
 $np->add_arg(
     spec => 'cacert|C=s',
     default => '',
-    help => "-T, --cacert /foo/ca.crt \n   "
+    help => "-C, --cacert /foo/ca.crt \n   "
     . "Ca certificate ",
 );
 $np->add_arg(
     spec => 'client-cert|J=s',
     default => '',
-    help => "-T, --httpclientcert /foo/bar.crt \n   "
+    help => "-J, --client-cert /foo/bar.crt \n   "
     . "Client certificate ",
 );
 $np->add_arg(
     spec => 'private-key|K=s',
     default => '',
-    help => "-T, --httpprivatekey /foo/bar.key \n   "
+    help => "-K, --private-key /foo/bar.key \n   "
     . "Client certificate keyfile",
 );
 
@@ -142,10 +142,9 @@ if ($np->opts->{'cacert'}) {
 }
 if ($np->opts->httpclientcert) {
     $ua->ssl_opts(
-                    SSL_cert_file       => $np->opts->httpclientcert,
-                    SSL_key_file        => $np->opts->httpprivatekey,
+        SSL_cert_file => $np->opts->httpclientcert,
+        SSL_key_file  => $np->opts->httpprivatekey,
     );
-
 }
 
 if ($np->opts->verbose) { (print Dumper ($ua))};
