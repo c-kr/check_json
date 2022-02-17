@@ -1,4 +1,5 @@
 #!/usr/bin/env perl
+# GH-Informatik 2018, based on https://github.com/c-kr/check_json
 
 use warnings;
 use strict;
@@ -20,7 +21,7 @@ my $np = Nagios::Plugin->new(
     . "[ -T|--contenttype <content-type> ] "
     . "[ --ignoressl ] "
     . "[ -h|--help ] ",
-    version => '0.5',
+    version => '1.0',
     blurb   => 'Nagios plugin to check JSON attributes via http(s)',
     extra   => "\nExample: \n"
     . "check_json.pl --url http://192.168.5.10:9332/local_stats --attributes '{shares}->{dead}' "
@@ -41,7 +42,7 @@ $np->add_arg(
 
 $np->add_arg(
     spec => 'attributes|a=s',
-    help => '-a, --attributes {shares}->{dead},{shares}->{uptime}',
+    help => '-a, --attributes <CSV list of perl structure IDs e.g. [0]->{state},[0]->{shares}->[0}->{uptime}',
     required => 1,
 );
 
@@ -77,7 +78,7 @@ $np->add_arg(
 
 $np->add_arg(
     spec => 'outputvars|o=s',
-    help => "-o, --outputvars eg. '* or {status_message}'\n   "    
+    help => "-o, --outputvars eg. '* or {status_message}'\n   "
     . "CSV list of fields output in status message, same syntax as perfvars"
 );
 
@@ -152,21 +153,33 @@ my $resultTmp;
 foreach my $attribute (sort keys %attributes){
     my $check_value;
     my $check_value_str = '$check_value = $json_response->'.$attribute;
-    
+
     if ($np->opts->verbose) { (print Dumper ($check_value_str))};
     eval $check_value_str;
 
     if (!defined $check_value) {
         $np->nagios_exit(UNKNOWN, "No value received");
     }
+    $resultTmp = 0;
 
-    if ($attributes{$attribute}{'divisor'}) {
+    my $cmpv1 = ".*";
+    $cmpv1 = $np->opts->expect if (defined( $np->opts->expect ) );
+
+    if ( $cmpv1 eq '.*' ) {
+      if ($attributes{$attribute}{'divisor'}) {
         $check_value = $check_value/$attributes{$attribute}{'divisor'};
-}
-
-if (defined $np->opts->expect && $np->opts->expect ne $check_value) {
-    $np->nagios_exit(CRITICAL, "Expected value (" . $np->opts->expect . ") not found. Actual: " . $check_value);
+      }
     }
+
+    # GHI GH-Informatik, changed fixed string compare to regex
+    # if (defined $np->opts->expect && $np->opts->expect ne $check_value) {
+
+    if (defined($cmpv1 ) && ( ! ( $check_value =~ m/$cmpv1/ ) ) ) {
+       $resultTmp = 2;
+       $np->nagios_exit(CRITICAL, "Expected value (" . $cmpv1 . ") not found. Actual: " . $check_value);
+    }
+    # GHI GH-Informatik, no numeric check if regex <> .*
+    if ( $cmpv1 eq '.*' ) {
 
     if ( $check_value eq "true" or $check_value eq "false" ) {
        if ( $check_value eq "true") {
@@ -202,6 +215,7 @@ if (defined $np->opts->expect && $np->opts->expect ne $check_value) {
            critical => $attributes{$attribute}{'critical'}
        );
      }
+    }
     $result = $resultTmp if $result < $resultTmp;
 
     $attributes{$attribute}{'check_value'}=$check_value;
@@ -234,7 +248,7 @@ if ($np->opts->perfvars) {
                 $np->add_perfdata(
                     label => lc $label,
                     value => $perf_value,
-                );            
+                );
             }
         }
     }
