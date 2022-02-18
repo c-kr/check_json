@@ -7,11 +7,15 @@ This Plugin is a fork of the existing JSON Plugin from https://github.com/c-kr/c
 
 Performance data is also enhanced to extract performance data compliant to Nagios and Graphite standards. One attribute is selected for thresholds check, multiple others can be added for extracting performance data. This plugin is aimed at simplifying Nagios, Icinga & Icinga2 polling of JSON status APIs.
 
-It is now also possible to compare with regex.
+Comparing with regular expression is supported.
+Expected values for OK and WARNING status.
+
+Custom headers can be added.
+Syntax for -H: key1:value1#key2:value2#key3:value3...
 
 Usage: 
 ```
-check_json -u|--url <URL> -a|--attribute <attribute> [ -c|--critical <threshold> ] [ -w|--warning <threshold> ] [ -p|--perfvars <fields> ] [ -o|--outputvars <fields> ] [ -t|--timeout <timeout> ] [ -d|--divisor <divisor> ] [ -T|--contenttype <content-type> ] [ --ignoressl ] [ -h|--help ]
+check_json -u|--url <URL> -a|--attribute <attribute> [ -c|--critical <threshold> ] [ -w|--warning <threshold> ] [ -p|--perfvars <fields> ] [ -o|--outputvars <fields> ] [ -e|--expect <value> ] [ -W|--warningstr <value> ] [ -t|--timeout <timeout> ] [ -d|--divisor <divisor> ] [ -H|--headers <fields> ][ -T|--contenttype <content-type> ] [ --ignoressl ] [ -h|--help ]
 ```
 
 Example: 
