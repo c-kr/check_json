@@ -1,20 +1,22 @@
 #!/usr/bin/env perl
-# GH-Informatik 2018, based on https://github.com/c-kr/check_json
+# GH-Informatik 2022, based on https://github.com/c-kr/check_json
 
 use warnings;
 use strict;
 use HTTP::Request::Common;
 use LWP::UserAgent;
 use JSON;
-use Nagios::Plugin;
+use Monitoring::Plugin;
 use Data::Dumper;
 
 my $np = Nagios::Plugin->new(
     usage => "Usage: %s -u|--url <http://user:pass\@host:port/url> -a|--attributes <attributes> "
     . "[ -c|--critical <thresholds> ] [ -w|--warning <thresholds> ] "
     . "[ -e|--expect <value> ] "
+    . "[ -W|--warningstr <value> ] "
     . "[ -p|--perfvars <fields> ] "
     . "[ -o|--outputvars <fields> ] "
+    . "[ -H|--headers <fields> ] "
     . "[ -t|--timeout <timeout> ] "
     . "[ -d|--divisor <divisor> ] "
     . "[ -m|--metadata <content> ] "
@@ -71,6 +73,11 @@ $np->add_arg(
 );
 
 $np->add_arg(
+    spec => 'warningstr|W=s',
+    help => '-W, --warningstr expected value to see for attribute on warning status.',
+);
+
+$np->add_arg(
     spec => 'perfvars|p=s',
     help => "-p, --perfvars eg. '* or {shares}->{dead},{shares}->{live}'\n   "
     . "CSV list of fields from JSON response to include in perfdata "
@@ -80,6 +87,12 @@ $np->add_arg(
     spec => 'outputvars|o=s',
     help => "-o, --outputvars eg. '* or {status_message}'\n   "
     . "CSV list of fields output in status message, same syntax as perfvars"
+);
+
+$np->add_arg(
+    spec => 'headers|H=s',
+    help => "-H, --headers eg. '* or {status_message}'\n   "
+        . "CSV list of custom headers to include in the json"
 );
 
 $np->add_arg(
@@ -121,11 +134,22 @@ if ($np->opts->ignoressl) {
 if ($np->opts->verbose) { (print Dumper ($ua))};
 
 my $response;
-if ($np->opts->metadata) {
-    $response = $ua->request(GET $np->opts->url, 'Content-type' => 'application/json', 'Content' => $np->opts->metadata );
-} else {
-    $response = $ua->request(GET $np->opts->url);
+my %headers = ('x-Key' => 'x-Value');
+$headers{'x-API-KEY'} = 'ghi-unit-testToKeN-1235432';
+if ($np->opts->headers) {
+    foreach my $key ($np->opts->headers eq '*' ? map { "{$_}"} sort keys %$response : split('#', $np->opts->headers)) {
+        my @header = split(':', $key);
+        $headers{$header[0]} = $header[1];
+    }
 }
+
+if ($np->opts->metadata) {
+    $response = $ua->request(GET $np->opts->url, 'Content-type' => 'application/json', 'Content' => $np->opts->metadata, %headers);
+} else {
+    $response = $ua->request(GET $np->opts->url, %headers);
+}
+
+
 
 if ($response->is_success) {
     if (!($response->header("content-type") =~ $np->opts->contenttype)) {
@@ -164,6 +188,8 @@ foreach my $attribute (sort keys %attributes){
 
     my $cmpv1 = ".*";
     $cmpv1 = $np->opts->expect if (defined( $np->opts->expect ) );
+    my $cmpv2 = ".*";
+    $cmpv2 = $np->opts->warningstr if (defined( $np->opts->warningstr ) );
 
     if ( $cmpv1 eq '.*' ) {
       if ($attributes{$attribute}{'divisor'}) {
@@ -175,8 +201,14 @@ foreach my $attribute (sort keys %attributes){
     # if (defined $np->opts->expect && $np->opts->expect ne $check_value) {
 
     if (defined($cmpv1 ) && ( ! ( $check_value =~ m/$cmpv1/ ) ) ) {
-       $resultTmp = 2;
-       $np->nagios_exit(CRITICAL, "Expected value (" . $cmpv1 . ") not found. Actual: " . $check_value);
+        if (defined($cmpv2 ) && ( ! ($cmpv2 eq '.*') ) && ( $check_value =~ m/$cmpv2/ ) ) {
+            $resultTmp = 1;
+            $np->nagios_exit(WARNING, "Expected WARNING value (" . $cmpv2 . ") found. Actual: " . $check_value);
+        }else{
+            $resultTmp = 2;
+            $np->nagios_exit(CRITICAL, "Expected OK and WARNING value (" . $cmpv1 . "and" . $cmpv2 . ") not found. Actual: " . $check_value);
+        }
+
     }
     # GHI GH-Informatik, no numeric check if regex <> .*
     if ( $cmpv1 eq '.*' ) {
