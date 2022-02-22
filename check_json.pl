@@ -134,8 +134,11 @@ if ($np->opts->ignoressl) {
 if ($np->opts->verbose) { (print Dumper ($ua))};
 
 my $response;
+
+#Add custom header values. example below
 my %headers = ('x-Key' => 'x-Value');
-$headers{'x-API-KEY'} = 'ghi-unit-testToKeN-1235432';
+$headers{'xkeyx'} = 'xtokenx';
+
 if ($np->opts->headers) {
     foreach my $key ($np->opts->headers eq '*' ? map { "{$_}"} sort keys %$response : split('#', $np->opts->headers)) {
         my @header = split(':', $key);
@@ -188,7 +191,7 @@ foreach my $attribute (sort keys %attributes){
 
     my $cmpv1 = ".*";
     $cmpv1 = $np->opts->expect if (defined( $np->opts->expect ) );
-    my $cmpv2 = ".*";
+    my $cmpv2 = "";
     $cmpv2 = $np->opts->warningstr if (defined( $np->opts->warningstr ) );
 
     if ( $cmpv1 eq '.*' ) {
