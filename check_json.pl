@@ -9,7 +9,7 @@ use JSON;
 use Monitoring::Plugin;
 use Data::Dumper;
 
-my $np = Nagios::Plugin->new(
+my $np = Monitoring::Plugin->new(
     usage => "Usage: %s -u|--url <http://user:pass\@host:port/url> -a|--attributes <attributes> "
     . "[ -c|--critical <thresholds> ] [ -w|--warning <thresholds> ] "
     . "[ -e|--expect <value> ] "
@@ -92,7 +92,7 @@ $np->add_arg(
 $np->add_arg(
     spec => 'headers|H=s',
     help => "-H, --headers eg. '* or {status_message}'\n   "
-        . "CSV list of custom headers to include in the json"
+        . "CSV list of custom headers to include in the json. Syntax: key1:value1#key2:value2..."
 );
 
 $np->add_arg(
@@ -136,11 +136,12 @@ if ($np->opts->verbose) { (print Dumper ($ua))};
 my $response;
 
 #Add custom header values. example below
-my %headers = ('x-Key' => 'x-Value');
-$headers{'xkeyx'} = 'xtokenx';
+#my %headers = ('x-Key' => 'x-Value');
+#$headers{'xkeyx'} = 'xtokenx';
+my %headers;
 
 if ($np->opts->headers) {
-    foreach my $key ($np->opts->headers eq '*' ? map { "{$_}"} sort keys %$response : split('#', $np->opts->headers)) {
+    foreach my $key (split('#', $np->opts->headers)) {
         my @header = split(':', $key);
         $headers{$header[0]} = $header[1];
     }
@@ -191,7 +192,7 @@ foreach my $attribute (sort keys %attributes){
 
     my $cmpv1 = ".*";
     $cmpv1 = $np->opts->expect if (defined( $np->opts->expect ) );
-    my $cmpv2 = "";
+    my $cmpv2;
     $cmpv2 = $np->opts->warningstr if (defined( $np->opts->warningstr ) );
 
     if ( $cmpv1 eq '.*' ) {
@@ -203,13 +204,13 @@ foreach my $attribute (sort keys %attributes){
     # GHI GH-Informatik, changed fixed string compare to regex
     # if (defined $np->opts->expect && $np->opts->expect ne $check_value) {
 
-    if (defined($cmpv1 ) && ( ! ( $check_value =~ m/$cmpv1/ ) ) ) {
+    if (defined($cmpv1 ) && ( ! ( $check_value =~ m/$cmpv1/ ) ) && ( ! ($cmpv1 eq '.*') ) ) {
         if (defined($cmpv2 ) && ( ! ($cmpv2 eq '.*') ) && ( $check_value =~ m/$cmpv2/ ) ) {
             $resultTmp = 1;
             $np->nagios_exit(WARNING, "Expected WARNING value (" . $cmpv2 . ") found. Actual: " . $check_value);
         }else{
             $resultTmp = 2;
-            $np->nagios_exit(CRITICAL, "Expected OK and WARNING value (" . $cmpv1 . "and" . $cmpv2 . ") not found. Actual: " . $check_value);
+            $np->nagios_exit(CRITICAL, "Expected OK and WARNING value (" . $cmpv1 . " and " . $cmpv2 . ") not found. Actual: " . $check_value);
         }
 
     }
