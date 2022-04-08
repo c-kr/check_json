@@ -19,8 +19,10 @@ my $np = Nagios::Plugin->new(
     . "[ -m|--metadata <content> ] "
     . "[ -T|--contenttype <content-type> ] "
     . "[ --ignoressl ] "
+    . "[ -A|--hattrib <value> ] "
+    . "[ -C|--hcon <value> ] "
     . "[ -h|--help ] ",
-    version => '0.5',
+    version => '0.51',
     blurb   => 'Nagios plugin to check JSON attributes via http(s)',
     extra   => "\nExample: \n"
     . "check_json.pl --url http://192.168.5.10:9332/local_stats --attributes '{shares}->{dead}' "
@@ -99,6 +101,17 @@ $np->add_arg(
     help => "--ignoressl\n   Ignore bad ssl certificates",
 );
 
+$np->add_arg(
+    spec => 'hattrib|A=s',
+    help => "-A, --header-attrib STRING \n "
+    . "Additional Header attribute.",
+);
+$np->add_arg(
+    spec => 'hcon|C=s',
+    help => "-C, --header-content STRING \n "
+    . "Additional Header content.",
+);
+
 ## Parse @ARGV and process standard arguments (e.g. usage, help, version)
 $np->getopts;
 if ($np->opts->verbose) { (print Dumper ($np))};
@@ -109,6 +122,7 @@ my $ua = LWP::UserAgent->new;
 $ua->env_proxy;
 $ua->agent('check_json/0.5');
 $ua->default_header('Accept' => 'application/json');
+$ua->default_header($np->opts->hattrib => $np->opts->hcon);
 $ua->protocols_allowed( [ 'http', 'https'] );
 $ua->parse_head(0);
 $ua->timeout($np->opts->timeout);
